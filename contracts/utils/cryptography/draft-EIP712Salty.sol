@@ -23,7 +23,7 @@ import "./ECDSA.sol";
  *
  * _Available since v3.4._
  */
-abstract contract EIP712 {
+abstract contract EIP712Salty {
     /* solhint-disable var-name-mixedcase */
     // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
     // invalidate the cached domain separator if the chain id changes.
@@ -33,6 +33,7 @@ abstract contract EIP712 {
     bytes32 private immutable _HASHED_NAME;
     bytes32 private immutable _HASHED_VERSION;
     bytes32 private immutable _TYPE_HASH;
+    bytes32 private immutable _SALT;
 
     /* solhint-enable var-name-mixedcase */
 
@@ -48,7 +49,7 @@ abstract contract EIP712 {
      * NOTE: These parameters cannot be changed except through a xref:learn::upgrading-smart-contracts.adoc[smart
      * contract upgrade].
      */
-    constructor(string memory name, string memory version) {
+    constructor(string memory name, string memory version, bytes32 salt) {
         bytes32 hashedName = keccak256(bytes(name));
         bytes32 hashedVersion = keccak256(bytes(version));
         bytes32 typeHash = keccak256(
@@ -56,8 +57,9 @@ abstract contract EIP712 {
         );
         _HASHED_NAME = hashedName;
         _HASHED_VERSION = hashedVersion;
+        _SALT = salt;
         _CACHED_CHAIN_ID = block.chainid;
-        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(typeHash, hashedName, hashedVersion);
+        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(typeHash, hashedName, hashedVersion, salt);
         _TYPE_HASH = typeHash;
     }
 
@@ -68,16 +70,17 @@ abstract contract EIP712 {
         if (block.chainid == _CACHED_CHAIN_ID) {
             return _CACHED_DOMAIN_SEPARATOR;
         } else {
-            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION);
+            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION, _SALT);
         }
     }
 
     function _buildDomainSeparator(
         bytes32 typeHash,
         bytes32 nameHash,
-        bytes32 versionHash
+        bytes32 versionHash,
+        bytes32 salt
     ) private view returns (bytes32) {
-        return keccak256(abi.encode(typeHash, nameHash, versionHash, block.chainid, address(this)));
+        return keccak256(abi.encode(typeHash, nameHash, versionHash, block.chainid, address(this), salt));
     }
 
     /**
